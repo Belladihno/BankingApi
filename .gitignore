@@ -2,6 +2,7 @@
 bin/
 obj/
 *.csproj.user
+appsettings.Development.json
 *.suo
 *.user
 *.userosscache
@@ -37,3 +38,7 @@ bld/
 ## OS
 Thumbs.db
 *.DS_Store
+
+## TRD & build documents
+AccountTransactionAPI_TRD_v1_0.md
+PLAN.md

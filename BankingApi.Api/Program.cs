@@ -1,15 +1,30 @@
+using BankingApi.Api.Extensions;
+using BankingApi.Api.Middleware;
+using BankingApi.Application.Validators;
+using BankingApi.Infrastructure;
+using BankingApi.Infrastructure.Data;
+using FluentValidation;
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Host.UseSerilog((context, config) =>
+{
+    config.ReadFrom.Configuration(context.Configuration);
+});
 
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterCustomerRequestValidator>();
+builder.Services.AddSwaggerWithJwt();
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddCorsPolicy();
+builder.Services.AddRateLimiting();
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseExceptionHandlingMiddleware();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -17,9 +32,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
+app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
-
+app.UseRateLimiter();
 app.MapControllers();
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    await DataSeeder.SeedAsync(scope.ServiceProvider);
+}
 
 app.Run();
