@@ -38,6 +38,7 @@ namespace BankingApi.Infrastructure
             services.AddScoped<ITransactionRepository, TransactionRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
 
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<ITokenService, TokenService>();
@@ -47,6 +48,11 @@ namespace BankingApi.Infrastructure
             services.AddScoped<ITransactionService, TransactionService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAuditService, AuditService>();
+
+            services.Configure<PaystackSettings>(
+                configuration.GetSection("Paystack"));
+
+            services.AddHttpClient<IPaymentService, PaystackService>();
 
             services.AddHostedService<DailyLimitResetJob>();
 

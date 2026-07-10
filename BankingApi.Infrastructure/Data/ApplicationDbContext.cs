@@ -17,6 +17,7 @@ namespace BankingApi.Infrastructure.Data
         public DbSet<Transaction> Transactions => Set<Transaction>();
         public DbSet<TransactionLedgerEntry> TransactionLedgerEntries => Set<TransactionLedgerEntry>();
         public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+        public DbSet<Payment> Payments => Set<Payment>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
