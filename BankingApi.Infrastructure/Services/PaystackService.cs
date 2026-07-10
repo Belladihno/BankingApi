@@ -9,18 +9,24 @@ using BankingApi.Domain.Entities;
 using BankingApi.Domain.Enums;
 using BankingApi.Domain.Exceptions;
 using BankingApi.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace BankingApi.Infrastructure.Services
 {
     public class PaystackService : IPaymentService
     {
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
         private readonly HttpClient _httpClient;
         private readonly PaystackSettings _settings;
         private readonly ApplicationDbContext _context;
         private readonly IAccountRepository _accountRepository;
         private readonly IPaymentRepository _paymentRepository;
         private readonly ITransactionRepository _transactionRepository;
+        private readonly ILogger<PaystackService> _logger;
 
         public PaystackService(
             HttpClient httpClient,
@@ -28,7 +34,8 @@ namespace BankingApi.Infrastructure.Services
             ApplicationDbContext context,
             IAccountRepository accountRepository,
             IPaymentRepository paymentRepository,
-            ITransactionRepository transactionRepository)
+            ITransactionRepository transactionRepository,
+            ILogger<PaystackService> logger)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
@@ -36,6 +43,7 @@ namespace BankingApi.Infrastructure.Services
             _accountRepository = accountRepository;
             _paymentRepository = paymentRepository;
             _transactionRepository = transactionRepository;
+            _logger = logger;
 
             _httpClient.BaseAddress = new Uri(_settings.BaseUrl);
             _httpClient.DefaultRequestHeaders.Authorization =
@@ -85,6 +93,7 @@ namespace BankingApi.Infrastructure.Services
             };
 
             var json = JsonSerializer.Serialize(body);
+            _logger.LogInformation("Calling Paystack /transaction/initialize with: {Json}", json);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             HttpResponseMessage? response = null;
@@ -104,17 +113,19 @@ namespace BankingApi.Infrastructure.Services
 
             if (!response.IsSuccessStatusCode)
             {
+                _logger.LogError("Paystack returned {StatusCode}: {Body}", response.StatusCode, responseJson);
                 payment.Status = PaymentStatus.Failed;
                 await _paymentRepository.UpdateAsync(payment);
                 await _paymentRepository.SaveChangesAsync();
                 throw new DomainException("Payment initialization failed", "PAYSTACK_ERROR");
             }
 
-            var result = JsonSerializer.Deserialize<PaystackInitializeResponse>(responseJson)
+            var result = JsonSerializer.Deserialize<PaystackInitializeResponse>(responseJson, JsonOptions)
                 ?? throw new DomainException("Invalid Paystack response", "PAYSTACK_ERROR");
 
             if (!result.Status)
             {
+                _logger.LogError("Paystack returned status false: {Body}", responseJson);
                 payment.Status = PaymentStatus.Failed;
                 payment.PaystackReference = result.Data?.Reference;
                 await _paymentRepository.UpdateAsync(payment);
@@ -199,7 +210,7 @@ namespace BankingApi.Infrastructure.Services
                 throw new DomainException("Withdrawal initiation failed", "PAYSTACK_ERROR");
             }
 
-            var result = JsonSerializer.Deserialize<PaystackTransferResponse>(responseJson)
+            var result = JsonSerializer.Deserialize<PaystackTransferResponse>(responseJson, JsonOptions)
                 ?? throw new DomainException("Invalid Paystack response", "PAYSTACK_ERROR");
 
             if (!result.Status)
@@ -272,7 +283,7 @@ namespace BankingApi.Infrastructure.Services
 
         public bool VerifyWebhookSignature(string rawBody, string signature)
         {
-            var keyBytes = Encoding.UTF8.GetBytes(_settings.WebhookSecret);
+            var keyBytes = Encoding.UTF8.GetBytes(_settings.SecretKey);
             var bodyBytes = Encoding.UTF8.GetBytes(rawBody);
 
             using var hmac = new HMACSHA512(keyBytes);
@@ -358,8 +369,12 @@ namespace BankingApi.Infrastructure.Services
 
         private class PaystackInitializeData
         {
+            [System.Text.Json.Serialization.JsonPropertyName("authorization_url")]
             public string? AuthorizationUrl { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("access_code")]
             public string? AccessCode { get; set; }
+
             public string? Reference { get; set; }
         }
 

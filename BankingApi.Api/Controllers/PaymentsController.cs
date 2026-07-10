@@ -12,6 +12,10 @@ namespace BankingApi.Api.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public PaymentsController(IPaymentService paymentService)
         {
@@ -40,7 +44,7 @@ namespace BankingApi.Api.Controllers
             PaystackWebhookEvent? webhookEvent;
             try
             {
-                webhookEvent = JsonSerializer.Deserialize<PaystackWebhookEvent>(rawBody);
+                webhookEvent = JsonSerializer.Deserialize<PaystackWebhookEvent>(rawBody, JsonOptions);
             }
             catch
             {
