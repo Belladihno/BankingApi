@@ -127,6 +127,8 @@ namespace BankingApi.Application.Services
                 throw new InsufficientFundsException($"Account balance of ₦{account.Balance:N} is insufficient for the requested ₦{request.Amount:N} withdrawal.");
             }
 
+            CheckAndResetDailyLimit(account);
+
             if (account.TodayWithdrawnAmount + request.Amount > account.DailyWithdrawalLimit)
             {
                 throw new DomainException($"Daily withdrawal limit of ₦{account.DailyWithdrawalLimit:N} would be exceeded", "DAILY_LIMIT");
@@ -221,6 +223,8 @@ namespace BankingApi.Application.Services
             {
                 throw new InsufficientFundsException($"Account balance of ₦{sourceAccount.Balance:N} is insufficient for the requested ₦{request.Amount:N} transfer.");
             }
+
+            CheckAndResetDailyLimit(sourceAccount);
 
             if (sourceAccount.TodayWithdrawnAmount + request.Amount > sourceAccount.DailyWithdrawalLimit)
             {
@@ -387,6 +391,16 @@ namespace BankingApi.Application.Services
 
             var initiator = await _userRepository.GetByIdAsync(initiatedBy);
             return MapToResponse(reversal, initiator?.FirstName ?? "Unknown");
+        }
+
+        private static void CheckAndResetDailyLimit(Account account)
+        {
+            var today = DateTimeOffset.UtcNow.Date;
+            if (account.LastDailyResetDate.Date < today)
+            {
+                account.TodayWithdrawnAmount = 0;
+                account.LastDailyResetDate = DateTimeOffset.UtcNow;
+            }
         }
 
         private void ValidateAccountForDebit(Account account)

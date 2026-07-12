@@ -11,6 +11,7 @@ namespace BankingApi.Domain.Entities
         public AccountStatus Status { get; set; } = AccountStatus.Active;
         public decimal DailyWithdrawalLimit { get; set; }
         public decimal TodayWithdrawnAmount { get; set; }
+        public DateTimeOffset LastDailyResetDate { get; set; } = DateTimeOffset.UtcNow;
         public Guid OwnerId { get; set; }
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

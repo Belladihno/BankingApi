@@ -38,6 +38,10 @@ namespace BankingApi.Infrastructure.Data.Configurations
                 .HasColumnType("decimal(18,4)")
                 .IsRequired();
 
+            builder.Property(x => x.LastDailyResetDate)
+                .HasColumnType("datetimeoffset(7)")
+                .IsRequired();
+
             builder.HasIndex(x => x.OwnerId);
 
             builder.Property(x => x.CreatedAt)

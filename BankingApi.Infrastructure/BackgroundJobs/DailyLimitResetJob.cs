@@ -31,7 +31,9 @@ namespace BankingApi.Infrastructure.BackgroundJobs
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            await context.Database.ExecuteSqlRawAsync("UPDATE Accounts SET TodayWithdrawnAmount = 0");
+            var now = DateTimeOffset.UtcNow;
+            await context.Database.ExecuteSqlRawAsync(
+                "UPDATE Accounts SET TodayWithdrawnAmount = 0, LastDailyResetDate = {0}", [now]);
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

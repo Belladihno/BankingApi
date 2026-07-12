@@ -35,7 +35,7 @@ namespace BankingApi.Api.Controllers
             return Ok(new { success = true, data = result, timestamp = DateTimeOffset.UtcNow });
         }
 
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "Customer,Admin,Teller")]
         [HttpGet("my-accounts")]
         public async Task<IActionResult> GetMyAccounts()
         {
